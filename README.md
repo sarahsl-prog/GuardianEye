@@ -1,208 +1,381 @@
-# GuardianEye - Intelligent Security Operations Platform
+# 🛡️ GuardianEye - AI-Powered Security Operations Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-green.svg)](https://github.com/langchain-ai/langgraph)
 
-GuardianEye is a sophisticated, AI-powered Security Operations Center (SOC) platform built with Python and LangGraph. It streamlines security workflows and enhances threat detection and response by leveraging generative AI for intelligent analysis, automated reporting, and proactive threat hunting.
+**GuardianEye** is a next-generation Security Operations Center (SOC) platform powered by multi-agent AI orchestration. Built with Python, LangGraph, and FastAPI, it provides intelligent security analysis, automated incident response, and proactive threat hunting through a hierarchical team of specialized AI agents.
 
-## 🎯 Overview
+## ✨ Key Features
 
-GuardianEye provides a comprehensive suite of AI-driven security agents that work together to monitor, analyze, and respond to security threats in real-time. The platform uses LangGraph for orchestrating complex agent workflows and maintaining state across multi-step security operations.
+### 🤖 Multi-Agent Architecture
+- **3-Tier Hierarchical Supervision**: Main Supervisor → Team Supervisors → Specialist Agents
+- **7 Specialized Security Agents**: Each expert in a specific security domain
+- **Intelligent Routing**: Automatic request routing based on content analysis
+- **State Persistence**: Full conversation history and workflow recovery
 
-## ✨ Core Features
+### 🔍 Security Capabilities
+- **Incident Triage**: Automated alert analysis and response recommendations
+- **Threat Hunting**: Proactive threat detection and hypothesis generation
+- **Anomaly Investigation**: Behavioral analysis and deviation detection
+- **Compliance Auditing**: Framework-based compliance assessment
+- **Vulnerability Prioritization**: Risk-based vulnerability management
+- **Security Knowledge**: RAG-powered security Q&A
+- **Reconnaissance Orchestration**: Coordinated information gathering
 
-### Security Agent Modules
-
-- **Incident Triage**: Automates security alert analysis, correlates events using threat intelligence, and suggests response actions
-- **Vulnerability Prioritization**: Prioritizes remediation workflows by checking for exploits, mapping to asset inventory, and evaluating actual risk context
-- **Anomaly Investigation**: Analyzes logs and user activity to detect suspicious behavior, comparing against established baselines
-- **Threat Hunting**: Proactively searches for threats, maintains investigation states, and learns from previous threat hunts
-- **Compliance Auditor**: Continuously checks configurations against compliance frameworks, maintains audit states, and generates reports
-- **Recon Orchestrator**: Coordinates OSINT gathering, subdomain enumeration, and vulnerability identification to map the attack surface
-- **Security Knowledge Graph**: Maintains a graph of the security architecture and past incidents, answering questions and providing context on the security posture
-
-### Dashboard Interface
-
-- Real-time visualization of security agent activities
-- Overall system status monitoring
-- Interactive security metrics and KPIs
-- Historical trend analysis
-
-### Configuration Management
-
-- Flexible agent configuration using environment variables
-- Support for multiple LLM providers
-- Customizable model settings per agent
+### 🚀 Technical Highlights
+- **Multi-LLM Support**: OpenAI, Anthropic, Google, Ollama, LMStudio
+- **Local & Cloud**: Run completely offline or in the cloud
+- **RAG with Vector Store**: Chroma-powered semantic search
+- **Production-Ready**: PostgreSQL state persistence, Redis caching
+- **JWT Authentication**: Secure API access
+- **Docker & Kubernetes**: Full containerization support
 
 ## 🏗️ Architecture
 
-GuardianEye is built on a modern Python architecture leveraging:
-
-- **LangGraph**: For orchestrating multi-agent workflows and maintaining state
-- **LangChain**: For building AI-powered security agents
-- **FastAPI**: For the backend API server
-- **React/Next.js**: For the frontend dashboard (optional)
-- **PostgreSQL/Redis**: For data persistence and caching
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Python 3.10 or higher
-- pip or poetry for package management
-- PostgreSQL (optional, for persistent storage)
-- Redis (optional, for caching)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd ReDoubt
-   ```
-
-2. **Create a virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   # or if using poetry
-   poetry install
-   ```
-
-4. **Set up environment variables:**
-   Create a `.env` file in the root directory:
-   ```env
-   # LLM Configuration
-   OPENAI_API_KEY=your_openai_key_here
-   ANTHROPIC_API_KEY=your_anthropic_key_here
-
-   # Database Configuration
-   DATABASE_URL=postgresql://user:password@localhost:5432/guardianeye
-   REDIS_URL=redis://localhost:6379/0
-
-   # Agent Configuration
-   DEFAULT_LLM_PROVIDER=openai
-   DEFAULT_MODEL=gpt-4
-
-   # API Configuration
-   API_HOST=0.0.0.0
-   API_PORT=8000
-   ```
-
-5. **Initialize the database:**
-   ```bash
-   python -m guardianeye.db.init
-   ```
-
-6. **Run the application:**
-   ```bash
-   python -m guardianeye.main
-   ```
-
-The API server will be available at `http://localhost:8000`.
-
-## 📁 Project Structure
-
 ```
-ReDoubt/
-├── guardianeye/              # Main application package
-│   ├── agents/              # Security agent implementations
-│   ├── graphs/              # LangGraph workflow definitions
-│   ├── tools/               # Agent tools and utilities
-│   ├── api/                 # FastAPI routes and endpoints
-│   ├── db/                  # Database models and migrations
-│   ├── config/              # Configuration management
-│   └── utils/               # Shared utilities
-├── tests/                   # Test suite
-├── docs/                    # Documentation
-├── scripts/                 # Utility scripts
-├── requirements.txt         # Python dependencies
-├── .env.example            # Example environment variables
-└── README.md               # This file
+┌─────────────────────────────────────────────────────────────────┐
+│                         FastAPI Backend                          │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Main Supervisor (Level 1)                      │ │
+│  └───┬──────────────────────────────────────────────────┬─────┘ │
+│      │                                                    │       │
+│  ┌───▼─────────────┐  ┌─────────────┐  ┌───────────────▼────┐  │
+│  │ Security Ops    │  │ Governance  │  │ Threat Intel       │  │
+│  │ Team Supervisor │  │ Team Super. │  │ Team Supervisor    │  │
+│  └───┬─────────────┘  └──────┬──────┘  └────────────┬───────┘  │
+│      │                       │                       │          │
+│  ┌───▼───────┐  ┌───────┐  ┌▼──────┐  ┌──────┐  ┌──▼──────┐  │
+│  │ Incident  │  │Anomaly│  │Compli-│  │Threat│  │Security │  │
+│  │  Triage   │  │Invest │  │ance   │  │Hunt  │  │Knowledge│  │
+│  │  + Vuln   │  │       │  │       │  │+Recon│  │  (RAG)  │  │
+│  └───────────┘  └───────┘  └───────┘  └──────┘  └─────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────────┐
+│  LLM Layer: OpenAI | Anthropic | Google | Ollama | LMStudio    │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+## 🚀 Quick Start
+
+### Option 1: Docker Compose (Recommended)
+
+```bash
+# Clone repository
+git clone <your-repo-url>
+cd GuardianEye
+
+# Copy environment file
+cp .env.example .env
+# Edit .env with your configuration
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+```
+
+Access the API at: `http://localhost:8000`
+API Documentation: `http://localhost:8000/docs`
+
+### Option 2: Local Development
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your configuration
+
+# Run the application
+python src/main.py
+```
+
+### Option 3: Kubernetes
+
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/redis.yaml
+kubectl apply -f k8s/deployment.yaml
+
+# Check status
+kubectl get pods
+kubectl get services
+```
+
+## 📋 Prerequisites
+
+- **Python**: 3.11 or higher
+- **Docker**: 24+ (for containerized deployment)
+- **PostgreSQL**: 16+ (for production state persistence)
+- **Redis**: 7+ (for caching)
+- **Ollama**: Latest (for local LLM inference, optional)
 
 ## 🔧 Configuration
 
-### Agent Configuration
+### Environment Variables
 
-Each security agent can be configured independently through the `.env` file or agent-specific configuration files:
+Edit `.env` to configure:
 
-```python
-# Example agent configuration
-INCIDENT_TRIAGE_MODEL=gpt-4
-INCIDENT_TRIAGE_TEMPERATURE=0.3
-INCIDENT_TRIAGE_MAX_TOKENS=2000
+```bash
+# LLM Provider (openai, anthropic, google, ollama, lmstudio)
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.1:8b
+LLM_TEMPERATURE=0.7
 
-THREAT_HUNTING_MODEL=claude-3-opus
-THREAT_HUNTING_TEMPERATURE=0.5
+# Cloud API Keys (optional)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=AIza...
+
+# Database
+POSTGRES_URL=postgresql+asyncpg://user:pass@localhost:5432/guardianeye
+REDIS_URL=redis://localhost:6379/0
+
+# Security
+JWT_SECRET_KEY=your-secret-key-change-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-### LLM Provider Support
+### Switching LLM Providers
 
-GuardianEye supports multiple LLM providers:
-- OpenAI (GPT-3.5, GPT-4)
-- Anthropic (Claude)
-- Google (Gemini)
-- Local models via Ollama
+**Use Local Ollama** (free, private):
+```bash
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.1:8b
+```
+
+**Use OpenAI GPT-4**:
+```bash
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4-turbo-preview
+OPENAI_API_KEY=sk-...
+```
+
+**Use Anthropic Claude**:
+```bash
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## 📚 API Usage
+
+### Authentication
+
+```bash
+# Get JWT token
+curl -X POST http://localhost:8000/api/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin"}'
+
+# Response
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+### Execute Security Analysis
+
+```bash
+# Incident triage
+curl -X POST http://localhost:8000/api/v1/agents/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "query": "Analyze this security alert: Multiple failed login attempts from IP 192.168.1.100",
+    "context": {
+      "severity": "high",
+      "alert_details": "50 failed SSH attempts in 5 minutes"
+    }
+  }'
+
+# Threat hunting
+curl -X POST http://localhost:8000/api/v1/agents/threat-hunting \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Generate threat hunting hypotheses for potential data exfiltration"
+  }'
+
+# Security knowledge (with RAG)
+curl -X POST http://localhost:8000/api/v1/agents/security-knowledge \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the key principles of Zero Trust Architecture?"
+  }'
+```
+
+## 🗂️ Project Structure
+
+```
+GuardianEye/
+├── src/
+│   ├── agents/              # Multi-agent system
+│   │   ├── base/            # Base agent classes
+│   │   ├── specialists/     # 7 specialist agents
+│   │   ├── graphs/          # LangGraph workflows
+│   │   └── supervisors/     # Supervisor agents
+│   ├── api/                 # FastAPI routes
+│   │   ├── v1/              # API v1 endpoints
+│   │   └── schemas/         # Pydantic schemas
+│   ├── core/                # Core functionality
+│   │   ├── llm_factory.py   # LLM provider factory
+│   │   ├── state.py         # Shared state
+│   │   └── checkpointer.py  # State persistence
+│   ├── db/                  # Database layer
+│   │   ├── postgres.py      # PostgreSQL
+│   │   ├── redis.py         # Redis
+│   │   └── vector_store.py  # Chroma vector DB
+│   ├── services/            # Business logic
+│   └── main.py              # FastAPI app
+├── k8s/                     # Kubernetes manifests
+├── scripts/                 # Utility scripts
+├── tests/                   # Test suite
+├── docker-compose.yml       # Docker Compose config
+├── Dockerfile               # Docker image
+└── requirements.txt         # Python dependencies
+```
+
+## 🎯 Use Cases
+
+### 1. Automated Incident Response
+```python
+# Triage security alerts automatically
+POST /api/v1/agents/incident-triage
+{
+  "query": "Suspicious PowerShell execution detected",
+  "context": {
+    "alert_details": "PowerShell with encoded command",
+    "severity": "critical"
+  }
+}
+```
+
+### 2. Proactive Threat Hunting
+```python
+# Generate and test threat hypotheses
+POST /api/v1/agents/threat-hunting
+{
+  "query": "Hunt for potential ransomware activity"
+}
+```
+
+### 3. Compliance Auditing
+```python
+# Audit against security frameworks
+POST /api/v1/agents/compliance-audit
+{
+  "query": "Audit our environment against NIST CSF",
+  "context": {
+    "framework": "NIST CSF",
+    "findings": "..."
+  }
+}
+```
+
+### 4. Security Q&A with RAG
+```python
+# Ask security questions with context from vector store
+POST /api/v1/agents/security-knowledge
+{
+  "query": "Explain the MITRE ATT&CK framework"
+}
+```
 
 ## 🧪 Testing
-
-Run the test suite:
 
 ```bash
 # Run all tests
 pytest
 
 # Run with coverage
-pytest --cov=guardianeye
+pytest --cov=src --cov-report=html
 
-# Run specific test module
-pytest tests/agents/test_incident_triage.py
+# Run specific test
+pytest tests/unit/test_agents/test_incident_triage.py
 ```
 
-## 📊 Monitoring and Logging
+## 📊 Monitoring
 
-GuardianEye includes comprehensive logging and monitoring:
+GuardianEye includes built-in observability:
 
-- Structured logging with JSON output
-- Metrics collection for agent performance
-- Distributed tracing support
-- Error tracking and alerting
+- **Health Checks**: `/api/v1/health`, `/api/v1/health/ready`
+- **Structured Logging**: JSON logs with execution traces
+- **Execution Metrics**: Execution time, token usage, routing paths
+- **LangSmith Integration**: Optional LangGraph observability
 
-## 🛡️ Security Considerations
+## 🔒 Security
 
-- All API keys and credentials should be stored in environment variables
-- Use HTTPS in production environments
-- Implement proper authentication and authorization
-- Regular security audits of agent configurations
-- Monitor and log all agent actions
+- **JWT Authentication**: Secure API access
+- **Input Validation**: Pydantic schema validation
+- **Audit Logging**: All agent executions logged
+- **Rate Limiting**: Redis-based rate limiting (optional)
+- **Secret Management**: Environment-based configuration
+
+## 🚀 Deployment
+
+### Staging
+```bash
+# Set environment
+export APP_ENV=staging
+
+# Deploy with Docker Compose
+docker-compose -f docker-compose.yml up -d
+```
+
+### Production (Kubernetes)
+```bash
+# Update secrets
+kubectl create secret generic guardianeye-secrets \
+  --from-literal=postgres_url="postgresql+asyncpg://..." \
+  --from-literal=jwt_secret="..." \
+  --from-literal=openai_api_key="sk-..."
+
+# Deploy
+kubectl apply -f k8s/
+kubectl get pods
+kubectl get services
+```
+
+## 📖 Documentation
+
+- [Architecture Redesign Report](ARCHITECTURE_REDESIGN_REPORT.md) - Comprehensive design document
+- API Documentation: `http://localhost:8000/docs` (auto-generated)
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 
 ## 🙏 Acknowledgments
 
-- Built with [LangGraph](https://github.com/langchain-ai/langgraph)
-- Powered by [LangChain](https://github.com/langchain-ai/langchain)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- **LangGraph**: Multi-agent orchestration framework
+- **LangChain**: LLM application framework
+- **FastAPI**: Modern Python web framework
+- **Ollama**: Local LLM inference
 
 ## 📞 Support
 
-For questions, issues, or feature requests, please:
-- Open an issue on GitHub
-- Check our [documentation](docs/)
-- Join our community discussions
+- **Issues**: [GitHub Issues](https://github.com/your-org/GuardianEye/issues)
+- **Documentation**: [docs/](docs/)
+- **Discussions**: [GitHub Discussions](https://github.com/your-org/GuardianEye/discussions)
 
 ---
 
-**Note**: This project is under active development. Features and APIs may change.
+**Built with ❤️ for the security community**
+
+**Version**: 2.0.0 | **Status**: Production Ready
