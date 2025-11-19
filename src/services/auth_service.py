@@ -1,54 +1,86 @@
-"""Authentication service (placeholder)."""
+"""Authentication service for JWT token management."""
 
-from typing import Any
+from datetime import datetime, timedelta
+from typing import Optional
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from src.config.settings import settings
 
 
-class AuthService:
-    """Service for handling authentication and authorization."""
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    async def verify_token(self, token: str) -> dict[str, Any] | None:
-        """
-        Verify JWT token and return user information.
 
-        Args:
-            token: JWT token to verify
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create JWT access token.
 
-        Returns:
-            User information if valid, None otherwise
-        """
-        # TODO: Implement actual JWT verification
-        # For now, return a placeholder
-        if token:
-            return {
-                "user_id": "user_123",
-                "username": "demo_user",
-                "email": "demo@guardianeye.ai"
-            }
+    Args:
+        data: Data to encode in token
+        expires_delta: Token expiration time
+
+    Returns:
+        Encoded JWT token
+    """
+    to_encode = data.copy()
+
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(
+            minutes=settings.access_token_expire_minutes
+        )
+
+    to_encode.update({"exp": expire})
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm
+    )
+
+    return encoded_jwt
+
+
+async def verify_token(token: str) -> Optional[dict]:
+    """Verify JWT token and return payload.
+
+    Args:
+        token: JWT token to verify
+
+    Returns:
+        Token payload if valid, None otherwise
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm]
+        )
+        return payload
+    except JWTError:
         return None
 
-    async def create_token(self, user_id: str) -> str:
-        """
-        Create JWT token for user.
 
-        Args:
-            user_id: User ID
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password against hash.
 
-        Returns:
-            JWT token
-        """
-        # TODO: Implement actual JWT creation
-        return "placeholder_token"
+    Args:
+        plain_password: Plain text password
+        hashed_password: Hashed password
 
-    async def authenticate_user(self, username: str, password: str) -> dict[str, Any] | None:
-        """
-        Authenticate user with username and password.
+    Returns:
+        True if password matches
+    """
+    return pwd_context.verify(plain_password, hashed_password)
 
-        Args:
-            username: Username
-            password: Password
 
-        Returns:
-            User information if authenticated, None otherwise
-        """
-        # TODO: Implement actual authentication
-        return None
+def get_password_hash(password: str) -> str:
+    """Hash password.
+
+    Args:
+        password: Plain text password
+
+    Returns:
+        Hashed password
+    """
+    return pwd_context.hash(password)

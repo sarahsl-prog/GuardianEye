@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardianeye
+  labels:
+    app: guardianeye
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: guardianeye
+  template:
+    metadata:
+      labels:
+        app: guardianeye
+    spec:
+      containers:
+      - name: guardianeye
+        image: guardianeye:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: APP_ENV
+          value: "production"
+        - name: LLM_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: guardianeye-config
+              key: llm_provider
+        - name: POSTGRES_URL
+          valueFrom:
+            secretKeyRef:
+              name: guardianeye-secrets
+              key: postgres_url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: guardianeye-secrets
+              key: redis_url
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: guardianeye-secrets
+              key: jwt_secret
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: guardianeye-secrets
+              key: openai_api_key
+              optional: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health/ready
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardianeye
+  labels:
+    app: guardianeye
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: guardianeye
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardianeye-config
+data:
+  llm_provider: "ollama"
+  llm_model: "llama3.1:8b"
+  log_level: "INFO"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: guardianeye-secrets
+type: Opaque
+stringData:
+  postgres_url: "postgresql+asyncpg://user:password@postgres-service:5432/guardianeye"
+  redis_url: "redis://redis-service:6379/0"
+  jwt_secret: "change-me-in-production"
+  openai_api_key: ""

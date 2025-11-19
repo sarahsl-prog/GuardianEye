@@ -1,67 +1,56 @@
-"""Dependency injection for FastAPI routes."""
-
-from typing import Annotated
+"""FastAPI dependencies for dependency injection."""
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-security = HTTPBearer(auto_error=False)
+from src.services.auth_service import verify_token
+
+
+security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
-):
-    """
-    Verify JWT token and return current user.
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> dict:
+    """Verify JWT token and return current user.
 
     Args:
         credentials: HTTP authorization credentials
 
     Returns:
-        User information (placeholder for now)
+        User information from token
 
     Raises:
-        HTTPException: If authentication fails
+        HTTPException: If token is invalid
     """
-    # TODO: Implement actual JWT verification
-    # For now, this is a placeholder that allows unauthenticated access
-    if credentials is None:
-        # Allow anonymous access for development
-        return {"user_id": "anonymous", "username": "anonymous"}
-
-    # Placeholder token verification
     token = credentials.credentials
-    if not token:
+    payload = await verify_token(token)
+
+    if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Return placeholder user
-    return {
-        "user_id": "user_123",
-        "username": "demo_user",
-        "email": "demo@guardianeye.ai"
-    }
+    return payload
 
 
-async def get_optional_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
-):
-    """
-    Get current user if authenticated, None otherwise.
+async def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        HTTPBearer(auto_error=False)
+    )
+) -> dict | None:
+    """Optionally verify JWT token.
 
     Args:
-        credentials: HTTP authorization credentials
+        credentials: Optional HTTP authorization credentials
 
     Returns:
-        User information or None
+        User information if token provided and valid, None otherwise
     """
     if credentials is None:
         return None
 
-    try:
-        return await get_current_user(credentials)
-    except HTTPException:
-        return None
+    token = credentials.credentials
+    return await verify_token(token)

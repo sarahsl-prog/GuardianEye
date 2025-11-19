@@ -1,1 +1,1 @@
-"""Agent implementations for GuardianEye."""
+"""Multi-agent system for GuardianEye."""

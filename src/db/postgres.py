@@ -1,30 +1,38 @@
-"""PostgreSQL database connection and utilities."""
+"""PostgreSQL connection for state persistence."""
 
-import asyncpg
+from typing import Optional
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 
 from src.config.settings import settings
 
 
-async def get_postgres_pool():
-    """
-    Create PostgreSQL connection pool.
+_engine: Optional[AsyncEngine] = None
+
+
+def get_postgres_connection() -> AsyncEngine:
+    """Get PostgreSQL async engine.
 
     Returns:
-        asyncpg connection pool
+        SQLAlchemy async engine
     """
-    pool = await asyncpg.create_pool(
-        settings.postgres_url,
-        min_size=1,
-        max_size=10,
-    )
-    return pool
+    global _engine
+
+    if _engine is None:
+        _engine = create_async_engine(
+            settings.postgres_url,
+            echo=settings.app_env == "development",
+            pool_pre_ping=True,
+            pool_size=10,
+            max_overflow=20
+        )
+
+    return _engine
 
 
-async def close_postgres_pool(pool):
-    """
-    Close PostgreSQL connection pool.
+async def close_postgres_connection():
+    """Close PostgreSQL connection."""
+    global _engine
 
-    Args:
-        pool: Connection pool to close
-    """
-    await pool.close()
+    if _engine:
+        await _engine.dispose()
+        _engine = None

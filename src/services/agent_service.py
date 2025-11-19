@@ -1,103 +1,125 @@
 """Agent execution service."""
 
+import time
+import uuid
 from typing import Any
+from langchain_core.messages import HumanMessage
 
-from src.agents.base.base_agent import AgentInput
-from src.config.agent_registry import AgentType
-from src.core.llm_factory import LLMFactory
+from src.agents.graphs.main_graph import create_main_graph
+from src.core.state import GuardianEyeState
+from src.core.checkpointer import get_checkpointer
+from src.db.vector_store import get_vector_store
 
 
 class AgentService:
-    """Service for executing agents and managing agent lifecycle."""
+    """Service for executing multi-agent workflows."""
 
     def __init__(self):
         """Initialize agent service."""
-        self.llm = LLMFactory.get_default_llm()
+        self.graph = None
+        self.checkpointer = None
 
-    async def execute_agent(
+    async def initialize(self):
+        """Initialize the agent graph and checkpointer."""
+        if self.graph is None:
+            self.graph = create_main_graph()
+        if self.checkpointer is None:
+            self.checkpointer = await get_checkpointer()
+
+    async def execute_query(
         self,
-        agent_name: str,
         query: str,
-        context: dict[str, Any] | None = None,
-        session_id: str | None = None
+        user_id: str = "default_user",
+        session_id: str | None = None,
+        context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """
-        Execute a specific agent.
+        """Execute a query through the multi-agent system.
 
         Args:
-            agent_name: Name of the agent to execute
             query: User query
+            user_id: User identifier
+            session_id: Session identifier for state persistence
             context: Additional context
-            session_id: Session ID for state persistence
 
         Returns:
-            Dictionary with execution results
-
-        Raises:
-            ValueError: If agent_name is invalid
+            Execution result with metadata
         """
-        # Validate agent name
-        try:
-            agent_type = AgentType(agent_name)
-        except ValueError:
-            raise ValueError(f"Invalid agent name: {agent_name}")
+        await self.initialize()
 
-        # Create agent input
-        agent_input = AgentInput(
-            query=query,
-            context=context or {},
-            session_id=session_id
-        )
+        # Generate session ID if not provided
+        if session_id is None:
+            session_id = str(uuid.uuid4())
 
-        # Get appropriate agent instance
-        agent = self._get_agent_instance(agent_type)
-
-        # Execute agent
-        result = await agent.process(agent_input)
-
-        return {
-            "result": result.result,
-            "metadata": result.metadata,
-            "agent_name": agent_name,
+        # Initialize state
+        initial_state: GuardianEyeState = {
+            "messages": [HumanMessage(content=query)],
+            "user_id": user_id,
+            "session_id": session_id,
+            "current_team": None,
+            "current_agent": None,
+            "next_action": None,
+            "intermediate_results": context or {},
+            "final_result": None,
+            "execution_path": [],
+            "tool_calls": [],
+            "total_tokens": 0,
+            "start_time": time.time()
         }
 
-    def _get_agent_instance(self, agent_type: AgentType):
-        """
-        Get agent instance based on agent type.
+        # Add vector store to context for RAG
+        try:
+            vector_store = get_vector_store()
+            initial_state["intermediate_results"]["vector_store"] = vector_store
+        except Exception as e:
+            print(f"Warning: Could not initialize vector store: {e}")
+
+        # Execute graph
+        config = {
+            "configurable": {
+                "thread_id": session_id,
+                "checkpoint_ns": user_id
+            }
+        }
+
+        try:
+            # Run the graph
+            result = await self.graph.ainvoke(initial_state, config=config)
+
+            # Calculate execution time
+            execution_time = time.time() - result.get("start_time", time.time())
+
+            return {
+                "result": result.get("final_result", "No result generated"),
+                "execution_path": result.get("execution_path", []),
+                "session_id": session_id,
+                "execution_time": execution_time,
+                "metadata": {
+                    "user_id": user_id,
+                    "team": result.get("current_team"),
+                    "agent": result.get("current_agent"),
+                    "tokens": result.get("total_tokens", 0)
+                }
+            }
+
+        except Exception as e:
+            return {
+                "result": f"Error executing query: {str(e)}",
+                "error": str(e),
+                "execution_path": [],
+                "session_id": session_id,
+                "execution_time": 0,
+                "metadata": {}
+            }
+
+    async def get_session_history(self, session_id: str) -> list[dict]:
+        """Get conversation history for a session.
 
         Args:
-            agent_type: Type of agent to instantiate
+            session_id: Session identifier
 
         Returns:
-            Agent instance
-
-        Raises:
-            ValueError: If agent type not implemented
+            List of messages in the session
         """
-        from src.agents.specialists.anomaly_investigation import (
-            AnomalyInvestigationAgent,
-        )
-        from src.agents.specialists.compliance_auditor import ComplianceAuditorAgent
-        from src.agents.specialists.incident_triage import IncidentTriageAgent
-        from src.agents.specialists.recon_orchestrator import ReconOrchestratorAgent
-        from src.agents.specialists.security_knowledge import SecurityKnowledgeAgent
-        from src.agents.specialists.threat_hunting import ThreatHuntingAgent
-        from src.agents.specialists.vulnerability_prioritization import (
-            VulnerabilityPrioritizationAgent,
-        )
-
-        agent_map = {
-            AgentType.INCIDENT_TRIAGE: IncidentTriageAgent,
-            AgentType.ANOMALY_INVESTIGATION: AnomalyInvestigationAgent,
-            AgentType.VULNERABILITY_PRIORITIZATION: VulnerabilityPrioritizationAgent,
-            AgentType.THREAT_HUNTING: ThreatHuntingAgent,
-            AgentType.RECON_ORCHESTRATOR: ReconOrchestratorAgent,
-            AgentType.COMPLIANCE_AUDITOR: ComplianceAuditorAgent,
-            AgentType.SECURITY_KNOWLEDGE: SecurityKnowledgeAgent,
-        }
-
-        agent_class = agent_map.get(agent_type)
-        if not agent_class:
-            raise ValueError(f"Agent not implemented: {agent_type}")
-
-        return agent_class(self.llm)
+        # This would query the checkpointer for session history
+        # Implementation depends on checkpointer capabilities
+        return []

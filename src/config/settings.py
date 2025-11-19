@@ -1,69 +1,76 @@
-"""Application settings management using Pydantic."""
+"""Application settings using Pydantic."""
 
+from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application configuration settings."""
+    """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="allow"
+        extra="ignore"
     )
 
-    # LLM Provider Configuration
-    llm_provider: str = Field(default="ollama", description="LLM provider to use")
-    llm_model: str = Field(default="llama3.1:8b", description="Model name")
-    llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    # Application
+    app_name: str = Field(default="GuardianEye", alias="APP_NAME")
+    app_env: Literal["development", "staging", "production"] = Field(
+        default="development", alias="APP_ENV"
+    )
+    api_host: str = Field(default="0.0.0.0", alias="API_HOST")
+    api_port: int = Field(default=8000, alias="API_PORT")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    cors_origins: list[str] = Field(
+        default=["http://localhost:3000", "http://localhost:8000"],
+        alias="CORS_ORIGINS"
+    )
+
+    # LLM Provider
+    llm_provider: Literal["openai", "anthropic", "google", "ollama", "lmstudio"] = Field(
+        default="ollama", alias="LLM_PROVIDER"
+    )
+    llm_model: str = Field(default="llama3.1:8b", alias="LLM_MODEL")
+    llm_temperature: float = Field(default=0.7, alias="LLM_TEMPERATURE")
 
     # Cloud Provider API Keys
-    openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
-    google_api_key: str | None = None
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
+    google_api_key: str | None = Field(default=None, alias="GOOGLE_API_KEY")
 
     # Local LLM Configuration
-    ollama_base_url: str = Field(default="http://localhost:11434")
-    lmstudio_base_url: str = Field(default="http://localhost:1234/v1")
-
-    # Database Configuration
-    postgres_url: str = Field(
-        default="postgresql://admin:password@localhost:5432/guardianeye"
+    ollama_base_url: str = Field(
+        default="http://localhost:11434", alias="OLLAMA_BASE_URL"
     )
-    redis_url: str = Field(default="redis://localhost:6379/0")
-    chroma_persist_directory: str = Field(default="./data/chroma")
+    lmstudio_base_url: str = Field(
+        default="http://localhost:1234/v1", alias="LMSTUDIO_BASE_URL"
+    )
 
-    # Application Configuration
-    app_env: str = Field(default="development")
-    api_host: str = Field(default="0.0.0.0")
-    api_port: int = Field(default=8000, ge=1, le=65535)
-    log_level: str = Field(default="INFO")
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"]
+    # Database
+    postgres_url: str = Field(
+        default="postgresql+asyncpg://admin:password@localhost:5432/guardianeye",
+        alias="POSTGRES_URL"
+    )
+    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+    chroma_persist_directory: str = Field(
+        default="./data/chroma", alias="CHROMA_PERSIST_DIRECTORY"
     )
 
     # Security
-    jwt_secret_key: str = Field(default="change-this-in-production")
-    jwt_algorithm: str = Field(default="HS256")
-    access_token_expire_minutes: int = Field(default=30, ge=1)
+    jwt_secret_key: str = Field(
+        default="your-secret-key-change-in-production", alias="JWT_SECRET_KEY"
+    )
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(
+        default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
 
-    # Monitoring (Optional)
-    langsmith_api_key: str | None = None
-    langsmith_project: str = Field(default="guardianeye")
-    langsmith_tracing: bool = Field(default=False)
-
-    @property
-    def is_production(self) -> bool:
-        """Check if running in production environment."""
-        return self.app_env == "production"
-
-    @property
-    def is_development(self) -> bool:
-        """Check if running in development environment."""
-        return self.app_env == "development"
+    # Embeddings
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small", alias="OPENAI_EMBEDDING_MODEL"
+    )
 
 
-# Global settings instance
 settings = Settings()

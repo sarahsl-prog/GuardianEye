@@ -1,65 +1,87 @@
-"""Incident Triage Agent for analyzing security incidents."""
+"""Incident Triage Agent for analyzing security alerts."""
 
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from pydantic import Field
 
-from src.agents.base.base_agent import AgentInput, AgentOutput, BaseAgent
+from src.agents.base.base_agent import BaseAgent, AgentInput, AgentOutput
 from src.core.prompts import INCIDENT_TRIAGE_PROMPT
 
 
 class IncidentTriageInput(AgentInput):
-    """Input schema for incident triage agent."""
+    """Input for incident triage agent."""
 
     alert_details: str = Field(..., description="Raw alert details")
-    alert_severity: str = Field(default="medium", description="Alert severity level")
+    severity: str = Field(default="medium", description="Alert severity level")
+
+
+class IncidentTriageOutput(AgentOutput):
+    """Output from incident triage agent."""
+
+    summary: str = Field(default="", description="Incident summary")
+    suggested_actions: list[str] = Field(
+        default_factory=list, description="Recommended actions"
+    )
+    priority: str = Field(default="medium", description="Priority level")
 
 
 class IncidentTriageAgent(BaseAgent):
     """Agent for analyzing security incidents and suggesting responses."""
 
     def __init__(self, llm):
-        """Initialize incident triage agent."""
-        super().__init__(llm, name="incident_triage")
-        self.parser = StrOutputParser()
-
-    def get_prompt_template(self) -> ChatPromptTemplate:
-        """Get prompt template for incident triage."""
-        return ChatPromptTemplate.from_messages([
-            ("system", INCIDENT_TRIAGE_PROMPT),
-            ("user", """Alert Details: {alert_details}
-            Severity: {alert_severity}
-
-            Please analyze this incident and provide your assessment.""")
-        ])
-
-    async def process(self, input_data: AgentInput) -> AgentOutput:
-        """
-        Process incident triage request.
+        """Initialize the Incident Triage Agent.
 
         Args:
-            input_data: Incident details
+            llm: Language model instance
+        """
+        super().__init__(llm, name="incident_triage")
+
+    def get_prompt_template(self) -> str:
+        """Return the prompt template for this agent."""
+        return INCIDENT_TRIAGE_PROMPT
+
+    async def process(self, input_data: AgentInput) -> AgentOutput:
+        """Process incident triage request.
+
+        Args:
+            input_data: Input containing alert details
 
         Returns:
-            AgentOutput with triage results
+            Triage analysis with recommendations
         """
-        # Create chain
-        chain = self.get_prompt_template() | self.llm | self.parser
-
-        # Prepare input
+        # Extract fields from input
         alert_details = input_data.context.get("alert_details", input_data.query)
-        alert_severity = input_data.context.get("alert_severity", "medium")
+        severity = input_data.context.get("severity", "medium")
+
+        # Create prompt
+        prompt = ChatPromptTemplate.from_template(self.get_prompt_template())
+
+        # Create chain
+        chain = prompt | self.llm | StrOutputParser()
 
         # Execute
         response = await chain.ainvoke({
             "alert_details": alert_details,
-            "alert_severity": alert_severity
+            "severity": severity
         })
 
-        return AgentOutput(
+        # Parse response and extract information
+        lines = response.strip().split('\n')
+        summary = response[:200] + "..." if len(response) > 200 else response
+        suggested_actions = [
+            line.strip('- ').strip()
+            for line in lines
+            if line.strip().startswith('-') or line.strip().startswith('•')
+        ][:5]
+
+        return IncidentTriageOutput(
             result=response,
+            summary=summary,
+            suggested_actions=suggested_actions or ["Review alert details", "Investigate further"],
+            priority="high" if "critical" in response.lower() else "medium",
             metadata={
                 "agent": self.name,
-                "severity": alert_severity,
+                "model": getattr(self.llm, "model_name", "unknown"),
+                "severity": severity
             }
         )
