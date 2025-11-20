@@ -42,7 +42,7 @@ def route_security_ops(state: GuardianEyeState) -> Literal["incident_triage", "a
 
 async def incident_triage_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute incident triage agent."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
     agent = IncidentTriageAgent(llm)
 
     messages = state["messages"]
@@ -61,7 +61,7 @@ async def incident_triage_node(state: GuardianEyeState) -> GuardianEyeState:
 
 async def anomaly_investigation_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute anomaly investigation agent."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
     agent = AnomalyInvestigationAgent(llm)
 
     messages = state["messages"]
@@ -79,7 +79,7 @@ async def anomaly_investigation_node(state: GuardianEyeState) -> GuardianEyeStat
 
 async def vulnerability_prioritization_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute vulnerability prioritization agent."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
     agent = VulnerabilityPrioritizationAgent(llm)
 
     messages = state["messages"]

@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.api.deps import get_optional_user
+from src.api.deps import get_current_user_optional
 from src.api.schemas.agent_request import AgentRequest
 from src.api.schemas.agent_response import AgentResponse
 from src.agents.specialists.anomaly_investigation import AnomalyInvestigationAgent
@@ -25,7 +25,7 @@ router = APIRouter()
 @router.post("/execute", response_model=AgentResponse)
 async def execute_agent(
     request: AgentRequest,
-    user: Annotated[dict | None, Depends(get_optional_user)] = None
+    user: Annotated[dict | None, Depends(get_current_user_optional)] = None
 ):
     """
     Execute an agent based on the request.
@@ -79,7 +79,7 @@ async def execute_agent(
 @router.post("/incident-triage", response_model=AgentResponse)
 async def run_incident_triage(
     request: AgentRequest,
-    user: Annotated[dict | None, Depends(get_optional_user)] = None
+    user: Annotated[dict | None, Depends(get_current_user_optional)] = None
 ):
     """Execute incident triage agent."""
     start_time = time.time()
@@ -114,7 +114,7 @@ async def run_incident_triage(
 @router.post("/threat-hunting", response_model=AgentResponse)
 async def run_threat_hunting(
     request: AgentRequest,
-    user: Annotated[dict | None, Depends(get_optional_user)] = None
+    user: Annotated[dict | None, Depends(get_current_user_optional)] = None
 ):
     """Execute threat hunting agent."""
     start_time = time.time()
@@ -149,7 +149,7 @@ async def run_threat_hunting(
 @router.post("/security-knowledge", response_model=AgentResponse)
 async def run_security_knowledge(
     request: AgentRequest,
-    user: Annotated[dict | None, Depends(get_optional_user)] = None
+    user: Annotated[dict | None, Depends(get_current_user_optional)] = None
 ):
     """Execute security knowledge agent."""
     start_time = time.time()

@@ -83,7 +83,7 @@ def route_to_team(state: GuardianEyeState) -> Literal["security_ops_team", "thre
     return current_team  # type: ignore
 
 
-def create_main_graph() -> StateGraph:
+def create_main_graph():
     """
     Create the main orchestration graph.
 
@@ -119,4 +119,4 @@ def create_main_graph() -> StateGraph:
     workflow.add_edge("threat_intel_team", END)
     workflow.add_edge("governance_team", END)
 
-    return workflow
+    return workflow.compile()

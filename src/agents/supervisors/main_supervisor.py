@@ -8,7 +8,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 from src.agents.base.base_supervisor import BaseSupervisor
 from src.config.agent_registry import TeamType
-from src.core.prompts import MAIN_SUPERVISOR_SYSTEM_PROMPT
+from src.core.prompts import MAIN_SUPERVISOR_PROMPT
 
 
 class MainSupervisor(BaseSupervisor):
@@ -38,7 +38,7 @@ class MainSupervisor(BaseSupervisor):
 
         # Create routing prompt
         routing_messages = [
-            SystemMessage(content=MAIN_SUPERVISOR_SYSTEM_PROMPT),
+            SystemMessage(content=MAIN_SUPERVISOR_PROMPT),
             HumanMessage(content=f"User request: {last_message.content}")
         ]
 
