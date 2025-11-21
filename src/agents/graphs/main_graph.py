@@ -1,119 +1,122 @@
-"""Main supervisor graph for routing requests to team supervisors."""
+"""Main orchestration graph for GuardianEye."""
 
-import time
 from typing import Literal
-from langchain_core.messages import HumanMessage, AIMessage
-from langgraph.graph import StateGraph, END
 
-from src.core.state import GuardianEyeState
+from langchain_core.messages import AIMessage
+from langgraph.graph import END, StateGraph
+
+from src.agents.supervisors.main_supervisor import MainSupervisor
 from src.core.llm_factory import LLMFactory
-from src.agents.graphs.security_ops_graph import create_security_ops_graph
-from src.agents.graphs.threat_intel_graph import create_threat_intel_graph
-from src.agents.graphs.governance_graph import create_governance_graph
+from src.core.state import GuardianEyeState
 
 
-def route_to_team(state: GuardianEyeState) -> Literal["security_ops", "threat_intel", "governance", "end"]:
-    """Route request to appropriate team based on content analysis.
+async def main_supervisor_node(state: GuardianEyeState):
+    """Main supervisor node that routes to team supervisors."""
+    llm = LLMFactory.get_default_llm()
+    supervisor = MainSupervisor(llm)
 
-    Args:
-        state: Current workflow state
+    # Route to appropriate team
+    next_team = await supervisor.route(state)
 
-    Returns:
-        Team name or "end" to finish
-    """
-    messages = state["messages"]
-    if not messages:
-        return "end"
+    # Update state
+    state["current_team"] = next_team if next_team != "FINISH" else None
+    state["execution_path"].append(f"main_supervisor -> {next_team}")
 
-    # Get the last message
-    last_message = messages[-1]
-    query = last_message.content.lower() if hasattr(last_message, 'content') else ""
-
-    # Simple keyword-based routing (can be enhanced with LLM-based routing)
-    if any(keyword in query for keyword in [
-        "incident", "triage", "alert", "anomaly", "investigation", "vulnerability", "vuln"
-    ]):
-        return "security_ops"
-    elif any(keyword in query for keyword in [
-        "threat", "hunting", "hunt", "recon", "reconnaissance", "intelligence"
-    ]):
-        return "threat_intel"
-    elif any(keyword in query for keyword in [
-        "compliance", "audit", "policy", "standard", "framework", "knowledge", "question", "how", "what"
-    ]):
-        return "governance"
-    else:
-        # Default to governance for general questions
-        return "governance"
-
-
-async def main_supervisor_node(state: GuardianEyeState) -> GuardianEyeState:
-    """Main supervisor node for initial routing.
-
-    Args:
-        state: Current workflow state
-
-    Returns:
-        Updated state with routing information
-    """
-    # Initialize start time if not set
-    if "start_time" not in state or not state["start_time"]:
-        state["start_time"] = time.time()
-
-    # Initialize execution path
-    if "execution_path" not in state or not state["execution_path"]:
-        state["execution_path"] = ["main_supervisor"]
-    else:
-        state["execution_path"].append("main_supervisor")
-
-    # Determine next action
-    next_team = route_to_team(state)
-    state["next_action"] = next_team
-    state["current_team"] = next_team
+    # Add routing message
+    if next_team != "FINISH":
+        state["messages"].append(
+            AIMessage(content=f"Routing to {next_team}")
+        )
 
     return state
 
 
-def create_main_graph():
-    """Create the main supervisor graph.
+async def security_ops_team_node(state: GuardianEyeState):
+    """Security operations team node."""
+    # Placeholder - will be expanded with actual team graph
+    state["execution_path"].append("security_ops_team")
+    state["final_result"] = "Security Operations Team processing..."
+
+    # Add response message
+    state["messages"].append(
+        AIMessage(content="Security Operations Team has processed your request.")
+    )
+
+    return state
+
+
+async def threat_intel_team_node(state: GuardianEyeState):
+    """Threat intelligence team node."""
+    # Placeholder - will be expanded with actual team graph
+    state["execution_path"].append("threat_intel_team")
+    state["final_result"] = "Threat Intelligence Team processing..."
+
+    # Add response message
+    state["messages"].append(
+        AIMessage(content="Threat Intelligence Team has processed your request.")
+    )
+
+    return state
+
+
+async def governance_team_node(state: GuardianEyeState):
+    """Governance team node."""
+    # Placeholder - will be expanded with actual team graph
+    state["execution_path"].append("governance_team")
+    state["final_result"] = "Governance Team processing..."
+
+    # Add response message
+    state["messages"].append(
+        AIMessage(content="Governance Team has processed your request.")
+    )
+
+    return state
+
+
+def route_to_team(state: GuardianEyeState) -> Literal["security_ops_team", "threat_intel_team", "governance_team", "__end__"]:
+    """Route to the appropriate team based on supervisor decision."""
+    current_team = state.get("current_team")
+
+    if current_team is None or current_team == "FINISH":
+        return "__end__"
+
+    return current_team  # type: ignore
+
+
+def create_main_graph() -> StateGraph:
+    """
+    Create the main orchestration graph.
 
     Returns:
-        Compiled LangGraph workflow
+        Compiled StateGraph for main orchestration
     """
-    # Create the graph
+    # Create graph
     workflow = StateGraph(GuardianEyeState)
 
-    # Add main supervisor node
+    # Add nodes
     workflow.add_node("main_supervisor", main_supervisor_node)
-
-    # Create team subgraphs
-    security_ops_graph = create_security_ops_graph()
-    threat_intel_graph = create_threat_intel_graph()
-    governance_graph = create_governance_graph()
-
-    # Add team graphs as nodes
-    workflow.add_node("security_ops", security_ops_graph)
-    workflow.add_node("threat_intel", threat_intel_graph)
-    workflow.add_node("governance", governance_graph)
+    workflow.add_node("security_ops_team", security_ops_team_node)
+    workflow.add_node("threat_intel_team", threat_intel_team_node)
+    workflow.add_node("governance_team", governance_team_node)
 
     # Set entry point
     workflow.set_entry_point("main_supervisor")
 
-    # Add conditional routing from main supervisor to teams
+    # Add conditional edges from supervisor to teams
     workflow.add_conditional_edges(
         "main_supervisor",
         route_to_team,
         {
-            "security_ops": "security_ops",
-            "threat_intel": "threat_intel",
-            "governance": "governance",
-            "end": END
+            "security_ops_team": "security_ops_team",
+            "threat_intel_team": "threat_intel_team",
+            "governance_team": "governance_team",
+            "__end__": END,
         }
     )
 
-    # All teams return to END
-    workflow.add_edge("security_ops", END)
-    workflow.add_edge("threat_intel", END)
-    workflow.add_edge("governance", END)
+    # Add edges from teams back to END
+    workflow.add_edge("security_ops_team", END)
+    workflow.add_edge("threat_intel_team", END)
+    workflow.add_edge("governance_team", END)
 
-    return workflow.compile()
+    return workflow

@@ -1,182 +1,206 @@
 """Agent execution endpoints."""
 
-from fastapi import APIRouter, Depends
+import time
+from typing import Annotated
 
-from src.api.schemas.agent_request import AgentRequest, AgentExecuteRequest
+from fastapi import APIRouter, Depends, HTTPException
+
+from src.api.deps import get_optional_user
+from src.api.schemas.agent_request import AgentRequest
 from src.api.schemas.agent_response import AgentResponse
-from src.api.deps import get_current_user_optional
-from src.services.agent_service import AgentService
-
+from src.agents.specialists.anomaly_investigation import AnomalyInvestigationAgent
+from src.agents.specialists.compliance_auditor import ComplianceAuditorAgent
+from src.agents.specialists.incident_triage import IncidentTriageAgent
+from src.agents.specialists.recon_orchestrator import ReconOrchestratorAgent
+from src.agents.specialists.security_knowledge import SecurityKnowledgeAgent
+from src.agents.specialists.threat_hunting import ThreatHuntingAgent
+from src.agents.specialists.vulnerability_prioritization import (
+    VulnerabilityPrioritizationAgent,
+)
+from src.core.llm_factory import LLMFactory
 
 router = APIRouter()
 
 
 @router.post("/execute", response_model=AgentResponse)
 async def execute_agent(
-    request: AgentExecuteRequest,
-    current_user: dict | None = Depends(get_current_user_optional)
+    request: AgentRequest,
+    user: Annotated[dict | None, Depends(get_optional_user)] = None
 ):
-    """Execute multi-agent workflow.
+    """
+    Execute an agent based on the request.
 
-    This endpoint automatically routes the query to the appropriate
-    team and agent based on content analysis.
+    This is the main endpoint that routes requests through the multi-agent system.
 
     Args:
         request: Agent execution request
-        current_user: Optional authenticated user
+        user: Optional authenticated user
 
     Returns:
-        Agent execution result
+        AgentResponse with results
     """
-    service = AgentService()
+    start_time = time.time()
 
-    # Get user ID from token or use default
-    user_id = current_user.get("username", "anonymous") if current_user else "anonymous"
+    try:
+        # Get LLM
+        llm = LLMFactory.get_default_llm()
 
-    result = await service.execute_query(
-        query=request.query,
-        user_id=user_id,
-        session_id=request.session_id,
-        context=request.context
-    )
+        # For now, directly execute a default agent (incident triage)
+        # TODO: Implement full graph-based routing with main supervisor
+        agent = IncidentTriageAgent(llm)
 
-    return AgentResponse(**result)
+        # Convert request to agent input
+        from src.agents.base.base_agent import AgentInput
+        agent_input = AgentInput(
+            query=request.query,
+            context=request.context,
+            session_id=request.session_id
+        )
+
+        # Execute agent
+        result = await agent.process(agent_input)
+
+        # Calculate execution time
+        execution_time = time.time() - start_time
+
+        return AgentResponse(
+            result=result.result,
+            agent_name=agent.name,
+            execution_time=execution_time,
+            metadata=result.metadata,
+            session_id=request.session_id,
+            execution_path=["execute -> incident_triage"]
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/incident-triage", response_model=AgentResponse)
-async def incident_triage(
+async def run_incident_triage(
     request: AgentRequest,
-    current_user: dict | None = Depends(get_current_user_optional)
+    user: Annotated[dict | None, Depends(get_optional_user)] = None
 ):
-    """Execute incident triage agent.
+    """Execute incident triage agent."""
+    start_time = time.time()
 
-    Args:
-        request: Incident details
-        current_user: Optional authenticated user
+    try:
+        llm = LLMFactory.get_default_llm()
+        agent = IncidentTriageAgent(llm)
 
-    Returns:
-        Triage analysis and recommendations
-    """
-    service = AgentService()
-    user_id = current_user.get("username", "anonymous") if current_user else "anonymous"
+        from src.agents.base.base_agent import AgentInput
+        agent_input = AgentInput(
+            query=request.query,
+            context=request.context,
+            session_id=request.session_id
+        )
 
-    # Add routing hint to ensure incident triage agent is used
-    context = request.context.copy()
-    context["force_route"] = "incident_triage"
+        result = await agent.process(agent_input)
+        execution_time = time.time() - start_time
 
-    result = await service.execute_query(
-        query=f"incident triage: {request.query}",
-        user_id=user_id,
-        session_id=request.session_id,
-        context=context
-    )
+        return AgentResponse(
+            result=result.result,
+            agent_name=agent.name,
+            execution_time=execution_time,
+            metadata=result.metadata,
+            session_id=request.session_id,
+            execution_path=[agent.name]
+        )
 
-    return AgentResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/threat-hunting", response_model=AgentResponse)
-async def threat_hunting(
+async def run_threat_hunting(
     request: AgentRequest,
-    current_user: dict | None = Depends(get_current_user_optional)
+    user: Annotated[dict | None, Depends(get_optional_user)] = None
 ):
-    """Execute threat hunting agent.
+    """Execute threat hunting agent."""
+    start_time = time.time()
 
-    Args:
-        request: Threat hunting request
-        current_user: Optional authenticated user
+    try:
+        llm = LLMFactory.get_default_llm()
+        agent = ThreatHuntingAgent(llm)
 
-    Returns:
-        Threat hunting analysis and hypotheses
-    """
-    service = AgentService()
-    user_id = current_user.get("username", "anonymous") if current_user else "anonymous"
+        from src.agents.base.base_agent import AgentInput
+        agent_input = AgentInput(
+            query=request.query,
+            context=request.context,
+            session_id=request.session_id
+        )
 
-    result = await service.execute_query(
-        query=f"threat hunting: {request.query}",
-        user_id=user_id,
-        session_id=request.session_id,
-        context=request.context
-    )
+        result = await agent.process(agent_input)
+        execution_time = time.time() - start_time
 
-    return AgentResponse(**result)
+        return AgentResponse(
+            result=result.result,
+            agent_name=agent.name,
+            execution_time=execution_time,
+            metadata=result.metadata,
+            session_id=request.session_id,
+            execution_path=[agent.name]
+        )
 
-
-@router.post("/anomaly-investigation", response_model=AgentResponse)
-async def anomaly_investigation(
-    request: AgentRequest,
-    current_user: dict | None = Depends(get_current_user_optional)
-):
-    """Execute anomaly investigation agent.
-
-    Args:
-        request: Anomaly investigation request
-        current_user: Optional authenticated user
-
-    Returns:
-        Anomaly analysis
-    """
-    service = AgentService()
-    user_id = current_user.get("username", "anonymous") if current_user else "anonymous"
-
-    result = await service.execute_query(
-        query=f"anomaly investigation: {request.query}",
-        user_id=user_id,
-        session_id=request.session_id,
-        context=request.context
-    )
-
-    return AgentResponse(**result)
-
-
-@router.post("/compliance-audit", response_model=AgentResponse)
-async def compliance_audit(
-    request: AgentRequest,
-    current_user: dict | None = Depends(get_current_user_optional)
-):
-    """Execute compliance auditor agent.
-
-    Args:
-        request: Compliance audit request
-        current_user: Optional authenticated user
-
-    Returns:
-        Compliance audit summary
-    """
-    service = AgentService()
-    user_id = current_user.get("username", "anonymous") if current_user else "anonymous"
-
-    result = await service.execute_query(
-        query=f"compliance audit: {request.query}",
-        user_id=user_id,
-        session_id=request.session_id,
-        context=request.context
-    )
-
-    return AgentResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/security-knowledge", response_model=AgentResponse)
-async def security_knowledge(
+async def run_security_knowledge(
     request: AgentRequest,
-    current_user: dict | None = Depends(get_current_user_optional)
+    user: Annotated[dict | None, Depends(get_optional_user)] = None
 ):
-    """Execute security knowledge agent with RAG.
+    """Execute security knowledge agent."""
+    start_time = time.time()
 
-    Args:
-        request: Security question
-        current_user: Optional authenticated user
+    try:
+        llm = LLMFactory.get_default_llm()
+        agent = SecurityKnowledgeAgent(llm)
+
+        from src.agents.base.base_agent import AgentInput
+        agent_input = AgentInput(
+            query=request.query,
+            context=request.context,
+            session_id=request.session_id
+        )
+
+        result = await agent.process(agent_input)
+        execution_time = time.time() - start_time
+
+        return AgentResponse(
+            result=result.result,
+            agent_name=agent.name,
+            execution_time=execution_time,
+            metadata=result.metadata,
+            session_id=request.session_id,
+            execution_path=[agent.name]
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/list")
+async def list_agents():
+    """
+    List all available agents.
 
     Returns:
-        Answer with security knowledge
+        Dictionary of available agents organized by team
     """
-    service = AgentService()
-    user_id = current_user.get("username", "anonymous") if current_user else "anonymous"
-
-    result = await service.execute_query(
-        query=request.query,
-        user_id=user_id,
-        session_id=request.session_id,
-        context=request.context
-    )
-
-    return AgentResponse(**result)
+    return {
+        "security_ops_team": [
+            "incident_triage",
+            "anomaly_investigation",
+            "vulnerability_prioritization"
+        ],
+        "threat_intel_team": [
+            "threat_hunting",
+            "recon_orchestrator"
+        ],
+        "governance_team": [
+            "compliance_auditor",
+            "security_knowledge"
+        ]
+    }

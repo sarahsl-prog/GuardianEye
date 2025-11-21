@@ -1,99 +1,60 @@
-version: '3.8'
-
 services:
-  # GuardianEye API application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    container_name: guardianeye-app
     ports:
       - "8000:8000"
-    environment:
-      - APP_ENV=development
-      - LLM_PROVIDER=ollama
-      - LLM_MODEL=llama3.1:8b
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - POSTGRES_URL=postgresql+asyncpg://guardianeye:guardianeye_password@postgres:5432/guardianeye
-      - REDIS_URL=redis://redis:6379/0
-      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
-      - JWT_SECRET_KEY=dev-secret-key-change-in-production
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    env_file: .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      ollama:
-        condition: service_started
+      - postgres
+      - redis
+      - ollama
     volumes:
       - ./src:/app/src
-      - chroma_data:/app/data/chroma
-    networks:
-      - guardianeye-network
-    restart: unless-stopped
+      - ./data:/app/data
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # PostgreSQL database for state persistence
   postgres:
     image: postgres:16-alpine
+    container_name: guardianeye-postgres
     environment:
       POSTGRES_DB: guardianeye
-      POSTGRES_USER: guardianeye
-      POSTGRES_PASSWORD: guardianeye_password
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - guardianeye-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U guardianeye"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d guardianeye"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
-  # Redis for caching and session management
   redis:
     image: redis:7-alpine
+    container_name: guardianeye-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - guardianeye-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
-  # Ollama for local LLM inference
   ollama:
     image: ollama/ollama:latest
+    container_name: guardianeye-ollama
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    networks:
-      - guardianeye-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    environment:
+      - OLLAMA_HOST=0.0.0.0
 
 volumes:
   postgres_data:
   redis_data:
   ollama_data:
-  chroma_data:
-
-networks:
-  guardianeye-network:
-    driver: bridge

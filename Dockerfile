@@ -1,8 +1,6 @@
-# Multi-stage Docker build for GuardianEye
+FROM python:3.11-slim
 
-# Stage 1: Build stage
-FROM python:3.11-slim as builder
-
+# Set working directory
 WORKDIR /app
 
 # Install system dependencies
@@ -11,41 +9,25 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy dependency files
+COPY pyproject.toml ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Stage 2: Runtime stage
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e .
 
 # Copy application code
 COPY src/ ./src/
-COPY pyproject.toml .
 
-# Create data directory for Chroma
+# Create data directory
 RUN mkdir -p /app/data/chroma
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
 
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run application
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

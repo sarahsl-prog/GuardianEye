@@ -1,5 +1,6 @@
-"""Base agent classes and interfaces."""
+"""Base classes for all agents."""
 
-from .base_agent import BaseAgent, AgentInput, AgentOutput
+from src.agents.base.base_agent import AgentInput, AgentOutput, BaseAgent
+from src.agents.base.base_supervisor import BaseSupervisor
 
-__all__ = ["BaseAgent", "AgentInput", "AgentOutput"]
+__all__ = ["BaseAgent", "BaseSupervisor", "AgentInput", "AgentOutput"]

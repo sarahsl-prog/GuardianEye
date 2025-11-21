@@ -1,1 +1,1 @@
-"""API layer for GuardianEye."""
+"""API module for GuardianEye."""

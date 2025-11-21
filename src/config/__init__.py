@@ -1,5 +1,5 @@
-"""Configuration management for GuardianEye."""
+"""Configuration module for GuardianEye."""
 
-from .settings import settings
+from src.config.settings import settings
 
 __all__ = ["settings"]

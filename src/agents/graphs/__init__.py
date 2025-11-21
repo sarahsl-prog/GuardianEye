@@ -1,5 +1,5 @@
-"""LangGraph workflow definitions for multi-agent routing."""
+"""LangGraph graph definitions for agent orchestration."""
 
-from .main_graph import create_main_graph
+from src.agents.graphs.main_graph import create_main_graph
 
 __all__ = ["create_main_graph"]
