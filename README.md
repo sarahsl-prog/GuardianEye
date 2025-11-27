@@ -90,9 +90,19 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your configuration
 
+# Initialize database
+python scripts/setup_db.py
+
 # Run the application
 python src/main.py
 ```
+
+The `setup_db.py` script will:
+- Initialize LangGraph state tables
+- Test PostgreSQL and Redis connections
+- Initialize Chroma vector store
+- Seed security knowledge base
+- Verify all services are ready
 
 ### Option 3: Kubernetes
 
@@ -297,18 +307,62 @@ pytest
 # Run with coverage
 pytest --cov=src --cov-report=html
 
+# Run specific test file
+pytest tests/unit/test_core/test_llm_factory.py
+
 # Run specific test
-pytest tests/unit/test_agents/test_incident_triage.py
+pytest tests/unit/test_agents/test_incident_triage.py -v
+
+# Run only unit tests
+pytest tests/unit/
+
+# Run only integration tests
+pytest tests/integration/
 ```
+
+### Test Fixtures
+
+The test suite includes comprehensive fixtures in `tests/conftest.py`:
+
+- `client` - FastAPI TestClient for API testing
+- `mock_llm` - Mock LLM for testing agents without API calls
+- `mock_llm_with_error` - Mock LLM for error handling tests
+- `sample_agent_request` - Standard request payload for testing
+
+### Test Coverage
+
+- **Unit Tests**: LLM factory, agent logic, utilities
+- **Integration Tests**: API endpoints, health checks, WebSocket streaming
+- **E2E Tests**: Complete workflows and multi-agent routing
 
 ## 📊 Monitoring
 
 GuardianEye includes built-in observability:
 
-- **Health Checks**: `/api/v1/health`, `/api/v1/health/ready`
+- **Health Checks**:
+  - `/api/v1/health` - Basic health status
+  - `/api/v1/ready` - Readiness probe (checks PostgreSQL, Redis, LLM)
+  - `/api/v1/live` - Liveness probe
 - **Structured Logging**: JSON logs with execution traces
 - **Execution Metrics**: Execution time, token usage, routing paths
 - **LangSmith Integration**: Optional LangGraph observability
+
+For production deployments, configure Kubernetes probes:
+```yaml
+livenessProbe:
+  httpGet:
+    path: /api/v1/live
+    port: 8000
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /api/v1/ready
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+```
 
 ## 🔒 Security
 
