@@ -37,7 +37,7 @@ def route_governance(state: GuardianEyeState) -> Literal["compliance_auditor", "
 
 async def compliance_auditor_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute compliance auditor agent."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
     agent = ComplianceAuditorAgent(llm)
 
     messages = state["messages"]
@@ -55,7 +55,7 @@ async def compliance_auditor_node(state: GuardianEyeState) -> GuardianEyeState:
 
 async def security_knowledge_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute security knowledge agent with RAG."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
 
     # Try to get vector store from state context
     vector_store = state.get("intermediate_results", {}).get("vector_store")

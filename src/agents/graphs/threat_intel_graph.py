@@ -39,7 +39,7 @@ def route_threat_intel(state: GuardianEyeState) -> Literal["threat_hunting", "re
 
 async def threat_hunting_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute threat hunting agent."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
     agent = ThreatHuntingAgent(llm)
 
     messages = state["messages"]
@@ -57,7 +57,7 @@ async def threat_hunting_node(state: GuardianEyeState) -> GuardianEyeState:
 
 async def recon_orchestrator_node(state: GuardianEyeState) -> GuardianEyeState:
     """Execute recon orchestrator agent."""
-    llm = LLMFactory.create_default_llm()
+    llm = LLMFactory.get_default_llm()
     agent = ReconOrchestratorAgent(llm)
 
     messages = state["messages"]

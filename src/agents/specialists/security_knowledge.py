@@ -20,7 +20,10 @@ class SecurityKnowledgeAgent(BaseAgent):
         """
         super().__init__(llm, name="security_knowledge")
         self.vector_store = vector_store
-        self.retriever = vector_store.as_retriever() if vector_store else None
+        if vector_store and hasattr(vector_store, 'as_retriever'):
+            self.retriever = vector_store.as_retriever()
+        else:
+            self.retriever = None
 
     def get_prompt_template(self) -> str:
         """Return the prompt template for this agent."""
