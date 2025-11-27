@@ -139,11 +139,10 @@ services:
           cpus: '1'
           memory: 2G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ready"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
 ```
 
 Run with:
@@ -209,15 +208,7 @@ kubectl get service guardianeye
 
 # Test health check
 kubectl port-forward service/guardianeye 8000:80
-
-# Basic health check
 curl http://localhost:8000/api/v1/health
-
-# Readiness check (verifies all services)
-curl http://localhost:8000/api/v1/ready
-
-# Liveness check
-curl http://localhost:8000/api/v1/live
 ```
 
 ### 7. Scale Deployment
@@ -234,67 +225,12 @@ kubectl autoscale deployment guardianeye --min=3 --max=10 --cpu-percent=70
 
 ### Health Checks
 
-GuardianEye provides three health check endpoints for comprehensive monitoring:
-
 ```bash
-# Basic health check (always returns healthy if app is running)
+# Liveness check
 curl http://your-domain/api/v1/health
 
-# Readiness check (verifies all dependencies: PostgreSQL, Redis, LLM)
-curl http://your-domain/api/v1/ready
-
-# Liveness check (simple alive status)
-curl http://your-domain/api/v1/live
-```
-
-**Recommended Kubernetes Probes**:
-
-```yaml
-livenessProbe:
-  httpGet:
-    path: /api/v1/live
-    port: 8000
-  initialDelaySeconds: 15
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /api/v1/ready
-    port: 8000
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-```
-
-**Health Check Responses**:
-
-Ready (200):
-```json
-{
-  "ready": true,
-  "services": {
-    "postgres": "healthy",
-    "redis": "healthy",
-    "llm": "healthy"
-  }
-}
-```
-
-Not Ready (503):
-```json
-{
-  "detail": {
-    "ready": false,
-    "services": {
-      "postgres": "unhealthy: Connection refused",
-      "redis": "healthy",
-      "llm": "healthy"
-    }
-  }
-}
+# Readiness check
+curl http://your-domain/api/v1/health/ready
 ```
 
 ### Application Logs
@@ -527,19 +463,13 @@ kubectl rollout undo deployment guardianeye --to-revision=2
 - [ ] All secrets configured in secret manager
 - [ ] Database backups automated
 - [ ] Monitoring and alerting configured
-- [ ] Health checks configured and passing:
-  - [ ] `/api/v1/health` - Basic health check
-  - [ ] `/api/v1/ready` - Readiness probe (PostgreSQL, Redis, LLM)
-  - [ ] `/api/v1/live` - Liveness probe
-- [ ] Kubernetes probes configured (liveness and readiness)
-- [ ] Load balancer health checks pointing to `/api/v1/ready`
+- [ ] Health checks passing
 - [ ] TLS/SSL certificates valid
 - [ ] Logging aggregation set up
 - [ ] Auto-scaling configured
 - [ ] Resource limits defined
 - [ ] Network policies applied
 - [ ] Disaster recovery plan documented
-- [ ] WebSocket endpoints tested (if using streaming)
 
 ---
 
