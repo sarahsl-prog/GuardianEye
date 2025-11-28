@@ -3,7 +3,6 @@
 import os
 from typing import Optional
 from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 
 from src.config.settings import settings
@@ -15,15 +14,43 @@ _vector_store: Optional[Chroma] = None
 def get_embeddings():
     """Get embeddings model for vector store.
 
+    Supports multiple embedding providers with automatic fallback:
+    - Ollama (free, local, no API key required)
+    - OpenAI (cloud-based, requires API key)
+
     Returns:
         Embeddings model instance
     """
-    # Use OpenAI embeddings by default
-    # Can be extended to support other embedding providers
-    return OpenAIEmbeddings(
-        model=settings.openai_embedding_model,
-        api_key=settings.openai_api_key
-    )
+    # Check for embedding provider preference in environment
+    embedding_provider = os.getenv("EMBEDDING_PROVIDER", "ollama").lower()
+
+    if embedding_provider == "ollama":
+        try:
+            from langchain_ollama import OllamaEmbeddings
+
+            print("Using Ollama embeddings (local, free)")
+            return OllamaEmbeddings(
+                model="nomic-embed-text",
+                base_url=settings.ollama_base_url
+            )
+        except ImportError:
+            print("⚠ langchain-ollama not installed, falling back to OpenAI")
+            embedding_provider = "openai"
+        except Exception as e:
+            print(f"⚠ Ollama embeddings failed: {e}")
+            print("  Falling back to OpenAI embeddings")
+            embedding_provider = "openai"
+
+    if embedding_provider == "openai":
+        from langchain_openai import OpenAIEmbeddings
+
+        print("Using OpenAI embeddings")
+        return OpenAIEmbeddings(
+            model=settings.openai_embedding_model,
+            api_key=settings.openai_api_key
+        )
+
+    raise ValueError(f"Unsupported embedding provider: {embedding_provider}")
 
 
 def initialize_vector_store(persist_directory: Optional[str] = None) -> Chroma:
