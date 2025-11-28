@@ -1,0 +1,38 @@
+# Docker Compose configuration for isolated test environment
+# This file defines separate test databases to avoid conflicts with development data
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: guardianeye-postgres-test
+    environment:
+      POSTGRES_DB: guardianeye_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_pass
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts with dev database
+    # Use tmpfs for faster tests (data is ephemeral)
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d guardianeye_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: guardianeye-redis-test
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts with dev Redis
+    # Use tmpfs for faster tests (data is ephemeral)
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+# Note: Chroma DB for tests uses local directory persistence
+# defined in tests/conftest.py (./data/chroma_test)

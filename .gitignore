@@ -76,5 +76,7 @@ chroma/
 # LangSmith
 .langsmith/
 
-# Passwords and keys
+# Password file
 .passwdfile
+
+
