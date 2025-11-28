@@ -30,46 +30,41 @@ async def execute_agent(
     """
     Execute an agent based on the request.
 
-    This is the main endpoint that routes requests through the multi-agent system.
+    This endpoint routes requests through the multi-agent orchestration system,
+    which intelligently routes to the appropriate team and specialist agent.
 
     Args:
         request: Agent execution request
         user: Optional authenticated user
 
     Returns:
-        AgentResponse with results
+        AgentResponse with results from the orchestrated multi-agent system
     """
-    start_time = time.time()
-
     try:
-        # Get LLM
-        llm = LLMFactory.get_default_llm()
+        # Use AgentService for full graph-based orchestration
+        from src.services.agent_service import AgentService
 
-        # For now, directly execute a default agent (incident triage)
-        # TODO: Implement full graph-based routing with main supervisor
-        agent = IncidentTriageAgent(llm)
+        service = AgentService()
 
-        # Convert request to agent input
-        from src.agents.base.base_agent import AgentInput
-        agent_input = AgentInput(
+        # Extract user ID from auth context
+        user_id = user.get("user_id", "anonymous") if user else "anonymous"
+
+        # Execute query through the multi-agent system
+        result = await service.execute_query(
             query=request.query,
-            context=request.context,
-            session_id=request.session_id
+            user_id=user_id,
+            session_id=request.session_id,
+            context=request.context
         )
 
-        # Execute agent
-        result = await agent.process(agent_input)
-
-        # Calculate execution time
-        execution_time = time.time() - start_time
-
+        # Map service response to AgentResponse schema
         return AgentResponse(
-            result=result.result,
-            agent_name=agent.name,
-            execution_time=execution_time,
-            metadata=result.metadata,
-            session_id=request.session_id,
-            execution_path=["execute -> incident_triage"]
+            result=result["result"],
+            agent_name=result["metadata"].get("agent", "multi-agent-system"),
+            execution_time=result["execution_time"],
+            metadata=result["metadata"],
+            session_id=result["session_id"],
+            execution_path=result["execution_path"]
         )
 
     except Exception as e:
