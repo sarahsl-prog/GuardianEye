@@ -75,3 +75,8 @@ chroma/
 
 # LangSmith
 .langsmith/
+
+# Password file
+.passwdfile
+
+

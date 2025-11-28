@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = Field(default="GuardianEye", alias="APP_NAME")
-    app_env: Literal["development", "staging", "production"] = Field(
+    app_env: Literal["development", "staging", "production", "testing"] = Field(
         default="development", alias="APP_ENV"
     )
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")

@@ -32,45 +32,51 @@ async def main_supervisor_node(state: GuardianEyeState):
 
 
 async def security_ops_team_node(state: GuardianEyeState):
-    """Security operations team node."""
-    # Placeholder - will be expanded with actual team graph
-    state["execution_path"].append("security_ops_team")
-    state["final_result"] = "Security Operations Team processing..."
+    """Security operations team node - executes security ops subgraph."""
+    from src.agents.graphs.security_ops_graph import create_security_ops_graph
 
-    # Add response message
-    state["messages"].append(
-        AIMessage(content="Security Operations Team has processed your request.")
-    )
+    # Create and execute the security ops subgraph
+    security_ops_graph = create_security_ops_graph()
 
-    return state
+    # Execute subgraph with current state
+    result_state = await security_ops_graph.ainvoke(state)
+
+    # Update execution path
+    result_state["execution_path"].append("security_ops_team")
+
+    return result_state
 
 
 async def threat_intel_team_node(state: GuardianEyeState):
-    """Threat intelligence team node."""
-    # Placeholder - will be expanded with actual team graph
-    state["execution_path"].append("threat_intel_team")
-    state["final_result"] = "Threat Intelligence Team processing..."
+    """Threat intelligence team node - executes threat intel subgraph."""
+    from src.agents.graphs.threat_intel_graph import create_threat_intel_graph
 
-    # Add response message
-    state["messages"].append(
-        AIMessage(content="Threat Intelligence Team has processed your request.")
-    )
+    # Create and execute the threat intel subgraph
+    threat_intel_graph = create_threat_intel_graph()
 
-    return state
+    # Execute subgraph with current state
+    result_state = await threat_intel_graph.ainvoke(state)
+
+    # Update execution path
+    result_state["execution_path"].append("threat_intel_team")
+
+    return result_state
 
 
 async def governance_team_node(state: GuardianEyeState):
-    """Governance team node."""
-    # Placeholder - will be expanded with actual team graph
-    state["execution_path"].append("governance_team")
-    state["final_result"] = "Governance Team processing..."
+    """Governance team node - executes governance subgraph."""
+    from src.agents.graphs.governance_graph import create_governance_graph
 
-    # Add response message
-    state["messages"].append(
-        AIMessage(content="Governance Team has processed your request.")
-    )
+    # Create and execute the governance subgraph
+    governance_graph = create_governance_graph()
 
-    return state
+    # Execute subgraph with current state
+    result_state = await governance_graph.ainvoke(state)
+
+    # Update execution path
+    result_state["execution_path"].append("governance_team")
+
+    return result_state
 
 
 def route_to_team(state: GuardianEyeState) -> Literal["security_ops_team", "threat_intel_team", "governance_team", "__end__"]:
